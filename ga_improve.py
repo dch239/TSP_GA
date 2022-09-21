@@ -22,14 +22,14 @@ class Population:
     def __init__(self, cities) -> None:
         self.population = []
         self.sum_of_fitnesses = 0
-        self.population_size = 50
+        self.population_size = 60
         self.best_chromosome = None
         self.MakeInitialPopulation(self.population_size, cities)
-        #self.CalculateSumOfFitnesses()
+        self.CalculateSumOfFitnesses()
 
     def dispop(self, popu):
         for c in popu:
-            print(c.sequence, 1/c.fitness)
+            print(c.sequence, 1/c.fitness, c.fitness)
 
     def avgmaxmin(self):
         maxm = sum = 0
@@ -41,21 +41,23 @@ class Population:
         print(f"\nmax = {maxm*10000} min = {minm*10000} avg = {sum/len(self.population)*10000}\n")
 
     def GeneticAlgo(self):
-        iterations = 2000
+        iterations = 3000
         termination_counter = 0
-        termination_limit = 300
+        termination_limit = 2000
         last_fitness = self.best_chromosome.fitness
+        #self.CalculateSumOfFitnesses() #FIRST TIME
 
         #distribution of crossover, mutation and random initiation
         cross_upto = self.population_size * 0.64
         mutate_upto = self.population_size * 0.92
         for t in range(iterations):
             new_population = []
+            new_sum_of_fitnesses = 0
             self.CalculateSumOfFitnesses()
             #print(f"sum of fitness = {self.sum_of_fitnesses}")
             #p_crossover = random.random()
             
-            for i in range(self.population_size):
+            for i in range(self.population_size - 1):
                 #CROSSOVER FOR SOME
                 if i < cross_upto:
                     p_mutation = random.random()
@@ -79,21 +81,22 @@ class Population:
                     # child = Chromosome(parent)
 
                 new_population.append(child)
-                # child = self.CrossOver()
-                # new_population.append(child)
+                new_sum_of_fitnesses += child.fitness
                 if child.fitness > self.best_chromosome.fitness: #CHANGED
                         self.best_chromosome = child
 
             # print(f"old:")
             # self.dispop(self.population)
-            new_population[-1] = self.best_chromosome
+            new_population.append(self.best_chromosome)
             self.population = new_population
+            self.sum_of_fitnesses = new_sum_of_fitnesses + self.best_chromosome.fitness
             # print(f"new:")
             # self.dispop(self.population)
             print(f"Generation: {t}")
             print(f"best yet distance: {1/self.best_chromosome.fitness}")
             self.avgmaxmin()
             print(f"termination count: {termination_counter}")
+            
             if self.best_chromosome.fitness > last_fitness:
                 last_fitness = self.best_chromosome.fitness
                 termination_counter = 0
@@ -188,6 +191,12 @@ def main():
     for points in best_path:
         f.write(f"{points[0]} {points[1]} {points[2]}")
         f.write("\n")
+
+    # #TEST CROSSOVER
+    # p = Population(cities)
+    # p.dispop(p.population)
+    # for i in range(5):
+    #     print(p.RouletteSelection())
 
     f.close()
 

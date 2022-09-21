@@ -3,6 +3,8 @@ from json.encoder import INFINITY
 import random
 from random import uniform
 import math
+import time
+start_time = time.time()
 
 class Chromosome:
     def __init__(self, sequence) -> None:
@@ -22,14 +24,15 @@ class Population:
     def __init__(self, cities) -> None:
         self.population = []
         self.sum_of_fitnesses = 0
-        self.population_size = 50
+        self.population_size = 100
         self.best_chromosome = None
         self.MakeInitialPopulation(self.population_size, cities)
-        #self.CalculateSumOfFitnesses()
+        self.SortPopulation()
+        self.CalculateSumOfFitnesses()
 
     def dispop(self, popu):
         for c in popu:
-            print(c.sequence, 1/c.fitness)
+            print(c.sequence, 1/c.fitness, c.fitness)
 
     def avgmaxmin(self):
         maxm = sum = 0
@@ -41,17 +44,18 @@ class Population:
         print(f"\nmax = {maxm*10000} min = {minm*10000} avg = {sum/len(self.population)*10000}\n")
 
     def GeneticAlgo(self):
-        iterations = 2000
+        iterations = 1500
         termination_counter = 0
-        termination_limit = 300
+        termination_limit = 1/3 * iterations
         last_fitness = self.best_chromosome.fitness
+        #self.CalculateSumOfFitnesses() #FIRST TIME
 
         #distribution of crossover, mutation and random initiation
         cross_upto = self.population_size * 0.64
         mutate_upto = self.population_size * 0.92
         for t in range(iterations):
-            new_population = []
-            self.CalculateSumOfFitnesses()
+            
+            #new_sum_of_fitnesses = 0
             #print(f"sum of fitness = {self.sum_of_fitnesses}")
             #p_crossover = random.random()
             
@@ -65,7 +69,7 @@ class Population:
                         p2_index = self.RouletteSelection()
                     child = self.CrossOver(p1_index, p2_index)
                     # child = self.Mutation(child)
-                    if p_mutation > 0.8:
+                    if p_mutation > 0.85:
                         child = self.Mutation(child)
                 
                 elif i>cross_upto and i<mutate_upto:
@@ -73,27 +77,43 @@ class Population:
                     child = self.Mutation(self.population[p_index])
                 
                 else:
-                    child = self.population[self.RouletteSelection()]                    
-                    # parent = self.population[0].sequence.copy()
-                    # random.shuffle(parent)
-                    # child = Chromosome(parent)
+                    #child = self.population[self.RouletteSelection()]                    
+                    parent = self.population[0].sequence.copy()
+                    child = self.JustShuffle(parent)
 
-                new_population.append(child)
-                # child = self.CrossOver()
-                # new_population.append(child)
+                    
+
+                self.population.append(child)
+                #new_sum_of_fitnesses += child.fitness
                 if child.fitness > self.best_chromosome.fitness: #CHANGED
                         self.best_chromosome = child
 
             # print(f"old:")
             # self.dispop(self.population)
-            new_population[-1] = self.best_chromosome
-            self.population = new_population
+            #new_population.append(self.best_chromosome)
+
+            #2/3 from RankList
+            self.SortPopulation()
+            strong_pop_size = math.ceil(self.population_size * (2/3))
+            self.population = self.population[:strong_pop_size]
+            self.CalculateSumOfFitnesses()
+            #self.sum_of_fitnesses = new_sum_of_fitnesses + self.best_chromosome.fitness
             # print(f"new:")
             # self.dispop(self.population)
+
+            #1/3 random
+            for z in range(self.population_size - strong_pop_size):
+                temp_parent = self.population[0].sequence.copy()
+                self.population.append(self.JustShuffle(temp_parent))
+
             print(f"Generation: {t}")
+            print(f"Pop len: {len(self.population)}")
             print(f"best yet distance: {1/self.best_chromosome.fitness}")
             self.avgmaxmin()
             print(f"termination count: {termination_counter}")
+            # if(termination_counter>298):
+            #     self.dispop(self.population)
+            
             if self.best_chromosome.fitness > last_fitness:
                 last_fitness = self.best_chromosome.fitness
                 termination_counter = 0
@@ -117,6 +137,9 @@ class Population:
         self.sum_of_fitnesses = 0
         for chromosome in self.population:
             self.sum_of_fitnesses += chromosome.fitness
+
+    def SortPopulation(self):
+        self.population.sort(key=lambda x: x.fitness, reverse=True)
 
     def RouletteSelection(self):
         random_val = uniform(0,self.sum_of_fitnesses)
@@ -173,6 +196,10 @@ class Population:
         # child[point_a] , child[point_b] = child[point_b], child[point_a]
         # return Chromosome(child) 
 
+    def JustShuffle(self, parent):
+        random.shuffle(parent)
+        return Chromosome(parent)
+
 def main():
     f = open('input.txt', 'r')
     count = int(f.readline())
@@ -189,8 +216,15 @@ def main():
         f.write(f"{points[0]} {points[1]} {points[2]}")
         f.write("\n")
 
+    # #TEST CROSSOVER
+    # p = Population(cities)
+    # p.dispop(p.population)
+    # for i in range(5):
+    #     print(p.RouletteSelection())
+
     f.close()
 
 
 if __name__ == "__main__":
     main()
+    print("--- %s seconds ---" % (time.time() - start_time))
